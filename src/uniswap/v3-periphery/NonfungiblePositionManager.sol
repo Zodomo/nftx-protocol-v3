@@ -9,6 +9,7 @@ import "@uniswap/v3-core/contracts/libraries/FullMath.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import {INFTXFeeDistributorV3} from "@src/interfaces/INFTXFeeDistributorV3.sol";
+import {IDelegateRegistry} from "delegate-registry/src/IDelegateRegistry.sol";
 import "./interfaces/INonfungiblePositionManager.sol";
 import "./interfaces/INonfungibleTokenPositionDescriptor.sol";
 import "./libraries/PositionKey.sol";
@@ -71,6 +72,9 @@ contract NonfungiblePositionManager is
 
     /// @dev The address of the token descriptor contract, which handles generating token URIs for position tokens
     address private immutable _tokenDescriptor;
+
+    /// @dev The address of the Delegate Registry contract
+    IDelegateRegistry private delegateRegistry = IDelegateRegistry(0x00000000000000447e69651d841bD8D104Bed493);
 
     // token ID => timestamp
     mapping(uint256 => uint256) public override lockedUntil;
@@ -218,6 +222,12 @@ contract NonfungiblePositionManager is
     modifier isAuthorizedForToken(uint256 tokenId) {
         require(_isApprovedOrOwner(msg.sender, tokenId), "Not approved");
         _;
+    }
+
+    modifier isAuthorizedOrDelegatedForToken(uint256 tokenId) {
+        if (_isApprovedOrOwner(msg.sender, tokenId)) _;
+        else if (delegateRegistry.checkDelegateForERC721(msg.sender, ownerOf(tokenId), address(this), tokenId, bytes32(""))) _;
+        else revert("Not approved");
     }
 
     function tokenURI(
@@ -401,7 +411,7 @@ contract NonfungiblePositionManager is
         external
         payable
         override
-        isAuthorizedForToken(params.tokenId)
+        isAuthorizedOrDelegatedForToken(params.tokenId)
         returns (uint256 amount0, uint256 amount1)
     {
         require(params.amount0Max > 0 || params.amount1Max > 0);

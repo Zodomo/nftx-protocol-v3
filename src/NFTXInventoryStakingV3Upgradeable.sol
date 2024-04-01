@@ -19,6 +19,7 @@ import {FixedPoint128} from "@uni-core/libraries/FixedPoint128.sol";
 import {IWETH9} from "@uni-periphery/interfaces/external/IWETH9.sol";
 import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import {INFTXVaultV3} from "@src/interfaces/INFTXVaultV3.sol";
+import {IDelegateRegistry} from "delegate-registry/src/IDelegateRegistry.sol";
 import {INFTXVaultFactoryV3} from "@src/interfaces/INFTXVaultFactoryV3.sol";
 import {ITimelockExcludeList} from "@src/interfaces/ITimelockExcludeList.sol";
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -87,6 +88,9 @@ contract NFTXInventoryStakingV3Upgradeable is
     mapping(uint256 => VaultGlobal) public override vaultGlobal;
 
     InventoryStakingDescriptor public override descriptor;
+
+    /// @dev The address of the Delegate Registry contract
+    IDelegateRegistry private delegateRegistry = IDelegateRegistry(0x00000000000000447e69651d841bD8D104Bed493);
 
     // =============================================================
     //                           INIT
@@ -512,7 +516,8 @@ contract NFTXInventoryStakingV3Upgradeable is
         uint256 wethOwed;
         uint256 len = positionIds.length;
         for (uint256 i; i < len; ) {
-            if (ownerOf(positionIds[i]) != msg.sender)
+            if (ownerOf(positionIds[i]) != msg.sender 
+                || delegateRegistry.checkDelegateForERC721(msg.sender, ownerOf(positionIds[i]), address(this), positionIds[i], bytes32("")))
                 revert NotPositionOwner();
 
             Position storage position = positions[positionIds[i]];

@@ -20,3 +20,6 @@
 [submodule "lib/forge-std"]
 	path = lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "lib/delegate-registry"]
+	path = lib/delegate-registry
+	url = https://github.com/delegatexyz/delegate-registry
